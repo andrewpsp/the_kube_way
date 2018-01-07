@@ -1,4 +1,4 @@
-##Cloud Admin Node
+# Cloud Admin Node
 
 - Nodes that allow access to cloud API and CLI resources when deployed. 
 - Default Keys and tokens passed to the containers as secrets as volumes, files, enviroment varibles or keys. 
@@ -117,9 +117,9 @@ spec:
 To begin using this template, choose one of the following options to get started:
 * [Download the latest release on entercloud.info/builds](http://entercloud.info:8080)
 * Clone the repo: `git clone https://github.com/andrewpsp/the_kube_way.git`
-* secrets created using'$kubectl create secret generic cloud-admin-node --from-file=./yourfiles.txt --from-file=./yourfiles.json'
-*
-'
+* secrets created using`$kubectl create secret generic cloud-admin-node --from-file=./yourfiles.txt --from-file=./yourfiles.json`
+
+
 
 ## Bugs and Issues
 
@@ -131,5 +131,5 @@ The Kube Way was created by and is maintained by [Andrew S Thompson]
 * https://twitter.com/andrewpsp
 
 
-[logo]: https://raw.githubusercontent.com/andrewpsp/the_kube_way/master/art.jpg "Key functions"
+[logo]: https://github.com/andrewpsp/the_kube_way/blob/master/art.jpg "Key functions"
 
