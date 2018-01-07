@@ -1,4 +1,4 @@
-#Cloud Admin Node
+##Cloud Admin Node
 
 - Nodes that allow access to cloud API and CLI resources when deployed. 
 - Default Keys and tokens passed to the containers as secrets as volumes, files, enviroment varibles or keys. 
@@ -130,4 +130,6 @@ The Kube Way was created by and is maintained by [Andrew S Thompson]
 
 * https://twitter.com/andrewpsp
 
+
+[logo]: https://raw.githubusercontent.com/andrewpsp/the_kube_way/master/art.jpg "Key functions"
 
