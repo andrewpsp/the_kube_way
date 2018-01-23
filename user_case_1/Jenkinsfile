@@ -1,0 +1,130 @@
+
+  pipeline {
+    agent any
+
+    triggers {
+      pollSCM("")
+    }
+
+    parameters {
+      string(name: 'PHASE', defaultValue: 'BUILD', description: '')
+      string(name: 'TARGET_ENV', defaultValue: 'DEV', description: '')
+      string(name: 'K8S_CLUSTER_URL', defaultValue: 'k8s cluster url', description: '')
+      string(name: 'K8S_CONTEXT', defaultValue: 'default', description: '')
+      string(name: 'K8S_USERNAME', defaultValue: 'username', description: '')
+      string(name: 'K8S_NAME', defaultValue: 'cluster name', description: '')
+      string(name: 'K8S_PODS_REPLICAS', defaultValue: '1', description: '')
+      string(name: 'K8S_SERVICE_ACCOUNT', defaultValue: 'default', description: '')
+    }
+
+    environment {
+	  username="dockerhub username"
+	  password="password"
+      dockerRegistry="dockerhub repo url"
+	  dockerImageRegistry="dockerhub repo url"
+      dockerProxyRegistry="dockerhub repo url"
+      K8S_PASSWORD="password"
+      K8S_CTX="${params.K8S_CONTEXT}"
+      VERSION="1.0.0"
+      DOCKER_CONFIG="${WORKSPACE}/.docker"
+      REPLICA_COUNT="${params.K8S_PODS_REPLICAS}"
+      SERVICE_ACCOUNT="${params.K8S_SERVICE_ACCOUNT}"
+      KUBECTL="/opt/app/kubernetes/v1.5.2/bin/kubectl"
+      KUBECTL_OPTS="--server=${params.K8S_CLUSTER_URL} --insecure-skip-tls-verify=true  --password=${env.K8S_PASSWORD}  --username=${params.K8S_USERNAME}"
+    }
+
+    tools {
+      maven "maven3"
+	  ant "ant18"
+      jdk "jdk1.8"
+    }
+    stages {
+      stage('Initialization') {
+        steps {
+          sh 'env | sort'
+          sh '''
+                cd "${WORKSPACE}"
+                curl -fsSL -o virtualenv-15.1.0.tar.gz https://github.com/pypa/virtualenv/archive/15.1.0.tar.gz
+                tar xvf virtualenv-15.1.0.tar.gz
+                python virtualenv-15.1.0/virtualenv.py ./env
+                python virtualenv-15.1.0/virtualenv.py --relocatable ./env
+                . ${WORKSPACE}/env/bin/activate
+                pip install requests
+          '''
+		  script {
+                env.APP_NS=readFile './namespace.txt'
+                env.LABEL_VERSION=VERSION.replaceAll(/\./,"").trim()
+                env.APP_NAME=readFile './servicename.txt'
+                env.APP_NAME=APP_NAME.trim()
+                env.buildImageName=APP_NS.trim() + '/' + APP_NAME.trim()
+                env.IMAGE_NAME=dockerImageRegistry.trim()+'/'+APP_NS.trim()+'/'+APP_NAME.trim()+':'+ LABEL_VERSION.trim()
+                env.END_POINT="${params.K8S_CLUSTER_URL}"
+                echo "${APP_NAME}"
+                echo "${APP_NS}"
+                echo "================================================================"
+                echo "Application     : ${APP_NAME}"
+                echo "Deploying Image : ${IMAGE_NAME}"
+                echo "K8S Context     : ${K8S_CTX}"
+                echo "K8S Namespace   : ${APP_NS}"
+                echo "K8S Environment : ${params.TARGET_ENV}"
+                echo "================================================================"
+		  }
+        }
+      }
+
+      stage ('Docker: Build') {
+        when {
+          expression { return "${params.PHASE}" =~ /BUILD.*/ }
+        }
+        steps {
+           withCredentials([usernamePassword(
+                credentialsId: 'activeDirectory', passwordVariable: 'password_ad', usernameVariable: 'username_ad')]) {
+            }
+          withCredentials([usernamePassword(
+                credentialsId: 'username', passwordVariable: 'password_docker', usernameVariable: 'username_docker')]) {
+			    sh '''
+	            	docker login --username ${username_docker} --password ${password_docker} --email ${username_docker} ${dockerRegistry}
+	            	docker login --username ${username_docker} --password ${password_docker} --email ${username_docker} ${dockerProxyRegistry}
+					docker build -t ${IMAGE_NAME} .
+		            docker push ${IMAGE_NAME}
+		            docker rmi ${IMAGE_NAME} || true
+	            '''
+            }
+         }
+      }
+
+      stage ('Deploy: Staging') {
+        when {
+          expression { return "${params.PHASE}" =~ /.*DEPLOY/ }
+        }
+        steps {
+          branch "master"
+          script {
+                    env.APP_NS=APP_NS.replaceAll(/\./,"-").trim()
+                    env.APP_NAME=APP_NAME.trim()
+                 }
+           sh '''
+                . ${WORKSPACE}/env/bin/activate
+          		bash k8s/deploy.sh
+          	 '''
+        }
+      }
+
+      stage ('Deploy: Development') {
+        when {
+          expression { return "${params.PHASE}" =~ /.*DEPLOY/ }
+        }
+        steps {
+          branch "develop"
+          script {
+                    env.APP_NS=APP_NS.replaceAll(/\./,"-").trim()
+                    env.APP_NAME=APP_NAME.trim()
+                 }
+          sh '''
+                . ${WORKSPACE}/env/bin/activate
+          		bash k8s/deploy.sh
+          	'''
+        }
+      }
+	}
+}
