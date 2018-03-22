@@ -50,10 +50,12 @@ spec :
         secret: 
           secretName: GSUtil 
           items:
-            - key: client_id
-              path: boto/client_id  
-            - key:  secret_key
-              path: boto/client_secret
+            - key: YOUR_GOOGLE_CLOUD_PROJECT_ID
+              path: google/google_project_id
+            - key:  YOUR_SERVICE_ACCOUNT_EMAIL_ADDRESS
+              path: google/google_client_email
+            - key: private-key
+              path: google/google_json_key_location
       - name: Hello-Openstack
         secret: 
           secretName: keystone-rc
@@ -106,7 +108,7 @@ spec:
         valueFrom:
           secretKeyRef:
             name: GSUtil
-            key: client_id
+            key: YOUR_GOOGLE_CLOUD_PROJECT_ID
   restartPolicy: Never
 ```
 
